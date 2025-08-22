@@ -1,6 +1,5 @@
 package io.github.some_example_name;
 
-import static java.rmi.server.LogStream.log;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
