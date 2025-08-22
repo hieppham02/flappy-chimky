@@ -18,9 +18,6 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-/**
- * First screen of the application. Displayed after the application is created.
- */
 public class GameScreen implements Screen {
 
     //Screen
@@ -40,6 +37,7 @@ public class GameScreen implements Screen {
 
     //Other parameters
     private int scrollSpeed;
+    private float scale;
     private Stage stage;
     private BitmapFont font;
     private Label.LabelStyle style;
@@ -52,11 +50,12 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         SetWorldSize();
+        scale = 6f;
         SetBirdPosition();
         setView();
         setBackground();
 
-        shapeRenderer = new ShapeRenderer();
+//        shapeRenderer = new ShapeRenderer();
         scrollSpeed = 300;
 
         stage = new Stage(new ScreenViewport());
@@ -76,13 +75,12 @@ public class GameScreen implements Screen {
         drawBackground();
 
         bird.update(delta);
-        bird.render(batch);
+        bird.render(batch, scale);
 
         touchDown();
-        if (bird.getY() > WORLD_HEIGHT - (24 * 5)) {
-            bird.setY(WORLD_HEIGHT - (24 * 5));
+        if (bird.getY() > WORLD_HEIGHT + (34 * scale)) {
+            bird.setY(WORLD_HEIGHT + (34 * scale));
             bird.setVelocityY(0);
-            System.out.println("Đu đỉnh rồi huhu ");
         }
 
         batch.end();
@@ -100,10 +98,9 @@ public class GameScreen implements Screen {
 
     public void SetBirdPosition() {
         bird = new Bird();
-        bird.setX(WORLD_WIDTH / 2 - (17 * 5));
+        bird.setX(WORLD_WIDTH / 2 - (17 * scale));
         bird.setY(WORLD_HEIGHT / 2);
-        bird.setGravity(-3000);
-
+        bird.setGravity(-5000);
 
     }
 
@@ -133,34 +130,35 @@ public class GameScreen implements Screen {
     }
 
     public void drawHitbox() {
-        bird.setHitboxSize(34 * 5, 24 * 5);
-        // vẽ hitbox debug
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(Color.RED);
-
-        // vẽ hitbox của chim
-        shapeRenderer.rect(
-            bird.getHitbox().x,
-            bird.getHitbox().y,
-            bird.getHitbox().width,
-            bird.getHitbox().height
-        );
-
-        shapeRenderer.end();
+//        bird.setHitboxSize(34 * scale, 24 * scale);
+//        // vẽ hitbox debug
+//        shapeRenderer.setProjectionMatrix(camera.combined);
+//        shapeRenderer.setColor(Color.RED);
+//
+//        // vẽ hitbox của chim
+//        shapeRenderer.rect(
+//            bird.getHitbox().x,
+//            bird.getHitbox().y,
+//            bird.getHitbox().width,
+//            bird.getHitbox().height
+//        );
+//
+//        shapeRenderer.end();
     }
-    public void drawLog(float delta){
-        logLabel.setPosition(bird.getX() + (34 * 5), bird.getY()); // tọa độ trên màn hình
+
+    public void drawLog(float delta) {
+        logLabel.setPosition(bird.getX() + (34 * scale), bird.getY()); // tọa độ trên màn hình
         stage.addActor(logLabel);
         stage.act(delta);
-        logLabel.setText((int)bird.getY());
+        logLabel.setText((int) bird.getVelocityY());
         stage.draw();
     }
+
     public void touchDown() {
         Gdx.input.setInputProcessor(new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                bird.jump();
+                bird.jump(1500);
                 return true;
             }
         });

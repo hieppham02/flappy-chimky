@@ -16,6 +16,8 @@ public class Bird {
     private float stateTime;
     private float velocityY;
     private float gravity; // pixel/s²
+    private int countFall;
+    private long delay;
     private Rectangle hitbox;
 
     public Bird() {
@@ -42,7 +44,14 @@ public class Bird {
         velocityY += gravity * delta;
         y += velocityY * delta;
 
-        // chạm đất
+        if (System.currentTimeMillis() - delay > 20) {
+            if (velocityY < 0 && countFall < 6) {
+                countFall++;
+            }
+
+            delay = System.currentTimeMillis();
+        }
+        
         if (y < 0) {
             y = 0;
             velocityY = 0;
@@ -57,15 +66,16 @@ public class Bird {
         hitbox.setPosition(x, y);
     }
 
-    public void jump() {
-        velocityY = 1000; // nhảy lên
+    public void jump(float jumpHeight) {
+        velocityY = jumpHeight; // nhảy lên
         stateTime = 0f;
+        countFall = -2;
+        delay = System.currentTimeMillis();
     }
 
-    public void render(SpriteBatch batch) {
-        float scale = 5f;
+    public void render(SpriteBatch batch, float scale) {
         TextureRegion currentFrame = animation.getKeyFrame(stateTime, true); // Lặp animation
-        batch.draw(currentFrame, x, y, 34 * scale, 24 * scale);
+        batch.draw(currentFrame, x, y, 34 / 2, 24 / 2, 34, 24, scale, scale, countFall * -15f);
     }
 
     public void dispose() {
@@ -95,6 +105,10 @@ public class Bird {
     public void setVelocityY(float velocityY) {
         this.velocityY = velocityY;
 
+    }
+
+    public float getVelocityY() {
+        return velocityY;
     }
 
     public Rectangle getHitbox() {
