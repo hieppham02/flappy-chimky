@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.Array;
 public class Bird {
     private TextureRegion[] frames;
     private Animation<TextureRegion> animation;
-    private Texture texture;
+    private final Texture texture;
     private float x, y;
     private float width, height;
     private float stateTime;
