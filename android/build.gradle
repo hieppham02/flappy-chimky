@@ -9,7 +9,7 @@ apply plugin: 'com.android.application'
 
 
 android {
-  namespace "io.github.some_example_name"
+  namespace "io.github.flappybird"
   compileSdk 35
   sourceSets {
     main {
