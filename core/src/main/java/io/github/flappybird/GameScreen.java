@@ -19,133 +19,175 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class GameScreen implements Screen {
-    //Screen
+    // Constants
+    private static final float SCALE = 5f;
+    private static final float SCROLL_SPEED = 300f;
+    private static final float BIRD_GRAVITY = -5000f;
+    private static final float JUMP_HEIGHT = 1500f;
+    private static final float GROUND_HEIGHT = 112f;
+    private static final float BASE_SPRITE_WIDTH = 336f;
+    private static final float DEBUG_FONT_SCALE = 3f;
+
+    //World size
+    private static int WORLD_WIDTH = 1280;
+    private static int WORLD_HEIGHT = 720;
+
+    // Graphics
     private Camera camera;
     private Viewport viewport;
-
-    //Graphics
-    private Texture background;
     private SpriteBatch batch;
-
-    //Timing
-    private int backgroundOffset;
-    private int baseOffset;
-
-    //World parameters
-    private int WORLD_WIDTH;
-    private int WORLD_HEIGHT;
-
-    //Other parameters
-    private int scrollSpeed;
-    private float scale;
-    private Stage stage;
-    private Label logLabel;
-
-    // Debug parameters
-    private boolean showHitbox = true; // Bật/tắt hiển thị hitbox
-    private Label debugLabel;
-
-    //Objects
-    private Bird bird;
     private ShapeRenderer shapeRenderer;
+
+    // Textures
+    private Texture backgroundTexture;
+    private Texture baseTexture;
+
+    // Scrolling
+    private float backgroundOffset;
+    private float baseOffset;
+
+    // Game objects
+    private Bird bird;
+
+    // UI
+    private Stage stage;
+    private Label velocityLabel;
+    private BitmapFont font;
+
+    // Debug
+    private boolean showHitbox = true;
 
     @Override
     public void show() {
-        SetWorldSize();
-        scale = 5f;
-        SetBirdPosition();
-        setView();
-        setBackground();
+        initializeGraphics();
+        initializeBird();
+        initializeUI();
+        setupInput();
+    }
 
+    private void initializeGraphics() {
+        // Camera and viewport
+        camera = new OrthographicCamera();
+        viewport = new ExtendViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
+
+        // Rendering
+        batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
-        scrollSpeed = 300;
 
+        // Textures
+        backgroundTexture = new Texture("objects/background-day.png");
+        baseTexture = new Texture("objects/base.png");
+
+        // Initialize offsets
+        backgroundOffset = 0f;
+        baseOffset = 0f;
+    }
+
+    private void initializeBird() {
+        bird = new Bird();
+
+        float birdX = WORLD_WIDTH / 2f;
+        float birdY = WORLD_HEIGHT / 2f;
+
+        bird.setX(birdX);
+        bird.setY(birdY);
+        bird.setGravity(BIRD_GRAVITY);
+        bird.setVelocityY(0);
+        bird.setScale(SCALE);
+    }
+
+    private void initializeUI() {
         stage = new Stage(new ScreenViewport());
-        BitmapFont font = new BitmapFont();
-        font.getData().setScale(3f); // Giảm size font một chút
-        Label.LabelStyle style = new Label.LabelStyle(font, Color.WHITE);
 
-        logLabel = new Label("VelocityY: 0", style);
-        debugLabel = new Label("Debug: Press H to toggle hitbox", style);
-        debugLabel.setPosition(10, WORLD_HEIGHT - 100);
+        // Font setup
+        font = new BitmapFont();
+        font.getData().setScale(DEBUG_FONT_SCALE);
 
-        // Thêm input processor để toggle hitbox
-        setupInputProcessor();
+        // Label style
+        Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
+
+        // Velocity label
+        velocityLabel = new Label("VelocityY: 0", labelStyle);
+    }
+
+    private void setupInput() {
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            @Override
+            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                bird.jump(JUMP_HEIGHT);
+                return true;
+            }
+        });
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        scrollBackround(delta);
-
-        // Vẽ background và objects
-        batch.begin();
-        drawBackground();
-        bird.update(delta, WORLD_HEIGHT, 112);
-        bird.render(batch);
-        batch.end();
-
-        // Vẽ hitbox (nếu bật debug)
-        drawHitbox();
-
-        // Vẽ debug info
-        drawLog(delta);
+        update(delta);
+        draw(delta);
     }
 
-    public void SetWorldSize() {
-        WORLD_WIDTH = Gdx.graphics.getWidth();
-        WORLD_HEIGHT = Gdx.graphics.getHeight();
+    private void update(float delta) {
+        updateScrolling(delta);
+        updateBird(delta);
     }
 
-    public void SetBirdPosition() {
-        bird = new Bird();
-        bird.setX((float) WORLD_WIDTH / 2 - (17 * scale));
-        bird.setY((float) WORLD_HEIGHT / 2);
-        bird.setGravity(-5000);
-        bird.setScale(scale);
-    }
+    private void updateScrolling(float delta) {
+        float scrollAmount = SCROLL_SPEED * delta;
 
-    public void setView() {
-        camera = new OrthographicCamera();
-        viewport = new ExtendViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
-    }
-
-    public void setBackground() {
-        background = new Texture("objects/background-day.png");
-        backgroundOffset = 0;
-        batch = new SpriteBatch();
-    }
-
-    public void scrollBackround(float delta) {
-        backgroundOffset += (int) (scrollSpeed * delta);
-        if (backgroundOffset > WORLD_WIDTH) {
+        backgroundOffset += scrollAmount;
+        if (backgroundOffset >= WORLD_WIDTH) {
             backgroundOffset = 0;
         }
 
-        baseOffset += (int) (scrollSpeed * delta);
-        if (baseOffset > WORLD_WIDTH) {
+        baseOffset += scrollAmount;
+        if (baseOffset >= WORLD_WIDTH) {
             baseOffset = 0;
         }
     }
 
-    public void drawBackground() {
-        // Vẽ 2 background liền nhau theo trục X
-        batch.draw(background, -backgroundOffset, 0, WORLD_WIDTH, WORLD_HEIGHT);
-        batch.draw(background, -backgroundOffset + WORLD_WIDTH, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
-        Texture base = new Texture("objects/base.png");
-        batch.draw(base, -baseOffset, 0, 336 * scale, 112 * 2);
-        batch.draw(base, -baseOffset + WORLD_WIDTH, 0, 336 * scale, 112 * 2);
+    private void updateBird(float delta) {
+        bird.update(delta, WORLD_HEIGHT, GROUND_HEIGHT);
     }
 
-    public void drawHitbox() {
-        if (!showHitbox) return;
+    private void draw(float delta) {
+        // Clear screen
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // Draw sprites
+        batch.begin();
+        drawBackground();
+        drawGround();
+        bird.render(batch);
+        batch.end();
+
+        // Draw debug info
+        if (showHitbox) {
+            drawHitbox();
+        }
+
+        drawUI(delta);
+    }
+
+    private void drawBackground() {
+        // Draw scrolling background
+        batch.draw(backgroundTexture, -backgroundOffset, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        batch.draw(backgroundTexture, -backgroundOffset + WORLD_WIDTH, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    }
+
+    private void drawGround() {
+        // Draw scrolling ground
+        float groundHeight = GROUND_HEIGHT * SCALE; // Scale ground height
+        float groundWidth = BASE_SPRITE_WIDTH * SCALE;
+
+        batch.draw(baseTexture, -baseOffset, 0, groundWidth, groundHeight);
+        batch.draw(baseTexture, -baseOffset + WORLD_WIDTH, 0, groundWidth, groundHeight);
+    }
+
+    private void drawHitbox() {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-
-        // Vẽ hitbox của bird bằng màu đỏ
         shapeRenderer.setColor(Color.RED);
+
         Rectangle birdHitbox = bird.getHitbox();
         shapeRenderer.rect(
             birdHitbox.x,
@@ -154,84 +196,78 @@ public class GameScreen implements Screen {
             birdHitbox.height
         );
 
-        // Vẽ outline của sprite bằng màu xanh để so sánh
-        shapeRenderer.setColor(Color.CYAN);
-        shapeRenderer.rect(
-            bird.getX(),
-            bird.getY(),
-            bird.getScaledWidth(),
-            bird.getScaledHeight()
-        );
-
         shapeRenderer.end();
     }
 
-    public void drawLog(float delta) {
-        // Cập nhật thông tin debug
-        logLabel.setText("VelocityY: " + (int) bird.getVelocityY());
-        logLabel.setPosition(bird.getX() + bird.getScaledWidth() + 10, bird.getY() + 50);
+    private void drawUI(float delta) {
+        // Update velocity label
+        velocityLabel.setText("VelocityY: " + (int) bird.getVelocityY());
+        velocityLabel.setPosition(
+            bird.getX() + bird.getScaledWidth() + 10,
+            bird.getY() + 50
+        );
 
-        debugLabel.setText("Debug: Press H to toggle hitbox | Hitbox: " + (showHitbox ? "ON" : "OFF"));
+        // Clear previous actors and add current ones
+        stage.clear();
+        stage.addActor(velocityLabel);
 
-        stage.addActor(logLabel);
-        stage.addActor(debugLabel);
+        // Update and draw stage
         stage.act(delta);
         stage.draw();
-
-        // Clear actors để tránh duplicate
-        stage.clear();
     }
 
-    public void setupInputProcessor() {
-        Gdx.input.setInputProcessor(new InputAdapter() {
-            @Override
-            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                bird.jump(1500);
-                return true;
-            }
-
-            @Override
-            public boolean keyDown(int keycode) {
-                // Toggle hitbox display với phím H
-                if (keycode == com.badlogic.gdx.Input.Keys.H) {
-                    showHitbox = !showHitbox;
-                    return true;
-                }
-                // Jump với phím Space
-                if (keycode == com.badlogic.gdx.Input.Keys.SPACE) {
-                    bird.jump(1500);
-                    return true;
-                }
-                return false;
-            }
-        });
+    public void toggleHitboxDisplay() {
+        showHitbox = !showHitbox;
     }
 
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
         batch.setProjectionMatrix(camera.combined);
-    }
 
-    @Override
-    public void dispose() {
-        batch.dispose();
-        background.dispose();
-        if (shapeRenderer != null) {
-            shapeRenderer.dispose();
-        }
-        stage.dispose();
+        // Update world dimensions
+        WORLD_WIDTH = width;
+        WORLD_HEIGHT = height;
     }
 
     @Override
     public void pause() {
+        // Game pause logic here if needed
     }
 
     @Override
     public void resume() {
+        // Game resume logic here if needed
     }
 
     @Override
     public void hide() {
+        // Clean up when screen is hidden
+    }
+
+    @Override
+    public void dispose() {
+        // Dispose of all resources
+        if (batch != null) {
+            batch.dispose();
+        }
+        if (backgroundTexture != null) {
+            backgroundTexture.dispose();
+        }
+        if (baseTexture != null) {
+            baseTexture.dispose();
+        }
+        if (shapeRenderer != null) {
+            shapeRenderer.dispose();
+        }
+        if (stage != null) {
+            stage.dispose();
+        }
+        if (font != null) {
+            font.dispose();
+        }
+        if (bird != null) {
+            bird.dispose();
+        }
     }
 }

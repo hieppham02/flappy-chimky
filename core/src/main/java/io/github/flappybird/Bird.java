@@ -6,121 +6,146 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Disposable;
 
-public class Bird {
-    private final Animation<TextureRegion> animation;
-    private final Texture texture;
-    private float x, y;
+public class Bird implements Disposable {
+    // Constants
+    private static final float ANIMATION_FRAME_DURATION = 0.275f;
+    private static final float BASE_WIDTH = 34f;
+    private static final float BASE_HEIGHT = 24f;
+    private static final int MAX_FALL_ROTATION = 6;
+    private static final float ROTATION_PER_FALL = -15f;
+    private static final long FALL_DELAY_MS = 20;
+
+    // Animation
+    private Animation<TextureRegion> animation;
     private float stateTime;
+
+    // Textures
+    private Texture downFlapTexture;
+    private Texture midFlapTexture;
+    private Texture upFlapTexture;
+
+    // Position and physics
+    private float x, y;
     private float velocityY;
-    private float gravity; // pixel/s²
-    private int countFall;
-    private long delay;
+    private float gravity;
     private float scale;
+
+    // Rotation logic
+    private int fallCount;
+    private long lastFallTime;
+
+    // Collision
     private Rectangle hitbox;
 
-    // Hitbox parameters - có thể điều chỉnh để fit với sprite
-    private static final float HITBOX_WIDTH_RATIO = 0.7f;  // 70% chiều rộng sprite
-    private static final float HITBOX_HEIGHT_RATIO = 0.8f; // 80% chiều cao sprite
-    private static final float HITBOX_OFFSET_X = 0.15f;    // Offset theo X
-    private static final float HITBOX_OFFSET_Y = 0.1f;     // Offset theo Y
-
     public Bird() {
-        texture = new Texture("objects/yellowbird-downflap.png");
-        velocityY = 0;
-
-        Texture textureDown = new Texture("objects/yellowbird-downflap.png");
-        Texture textureMid = new Texture("objects/yellowbird-midflap.png");
-        Texture textureUp = new Texture("objects/yellowbird-upflap.png");
-
-        TextureRegion[] frames = new TextureRegion[3];
-        frames[0] = new TextureRegion(textureDown);
-        frames[1] = new TextureRegion(textureMid);
-        frames[2] = new TextureRegion(textureUp);
-
-        animation = new Animation<TextureRegion>(0.275f, new Array<TextureRegion>(frames));
-        stateTime = 0f;
-
-        // Khởi tạo hitbox
-        hitbox = new Rectangle();
+        initializeTextures();
+        initializeAnimation();
+        initializePhysics();
+        initializeHitbox();
     }
 
-    public void update(float delta, int topLim, int botLim) {
-        stateTime += delta;
+    private void initializeTextures() {
+        downFlapTexture = new Texture("objects/yellowbird-downflap.png");
+        midFlapTexture = new Texture("objects/yellowbird-midflap.png");
+        upFlapTexture = new Texture("objects/yellowbird-upflap.png");
+    }
 
-        velocityY += gravity * delta;
-        y += velocityY * delta;
+    private void initializeAnimation() {
+        TextureRegion[] frames = {
+            new TextureRegion(downFlapTexture),
+            new TextureRegion(midFlapTexture),
+            new TextureRegion(upFlapTexture)
+        };
 
-        if (System.currentTimeMillis() - delay > 20) {
-            if (velocityY < 0 && countFall < 6) {
-                countFall++;
-            }
-            delay = System.currentTimeMillis();
-        }
+        animation = new Animation<>(ANIMATION_FRAME_DURATION, new Array<>(frames));
+        stateTime = 0f;
+    }
 
-        if (y < botLim * (scale / 2)) {
-            y = botLim * (scale / 2);
-            velocityY = 0;
-        }
+    private void initializePhysics() {
+        velocityY = 0f;
+        gravity = 0f;
+        fallCount = 0;
+        lastFallTime = 0;
+    }
 
-        if (y > topLim + (34 * scale)) {
-            y = (topLim + (34 * scale));
-            velocityY = 0;
-        }
-
-        // Cập nhật hitbox mỗi frame
+    private void initializeHitbox() {
+        hitbox = new Rectangle();
         updateHitbox();
     }
 
-    /**
-     * Cập nhật hitbox theo vị trí và rotation của bird
-     */
-    private void updateHitbox() {
-        float rotation = countFall * -15f; // Góc xoay hiện tại
-
-        // Kích thước hitbox thực tế
-        float hitboxWidth = getScaledWidth() * HITBOX_WIDTH_RATIO;
-        float hitboxHeight = getScaledHeight() * HITBOX_HEIGHT_RATIO;
-
-        // Tính toán vị trí hitbox với offset
-        float hitboxX = x + (getScaledWidth() * HITBOX_OFFSET_X);
-        float hitboxY = y + (getScaledHeight() * HITBOX_OFFSET_Y);
-
-        // Nếu muốn hitbox xoay theo bird (phức tạp hơn)
-        // Ở đây tôi giữ hitbox là hình chữ nhật không xoay để đơn giản
-        hitbox.set(hitboxX, hitboxY, hitboxWidth, hitboxHeight);
+    public void update(float delta, float topLimit, float bottomLimit) {
+        updateHitbox();
+        updateAnimation(delta);
+        updatePhysics(delta);
+        updateRotation();
+        applyBoundaries(topLimit, bottomLimit);
     }
 
-    /**
-     * Phương thức để set hitbox theo tỷ lệ tùy chỉnh
-     */
-    public void setCustomHitbox(float widthRatio, float heightRatio, float offsetX, float offsetY) {
-        float hitboxWidth = getScaledWidth() * widthRatio;
-        float hitboxHeight = getScaledHeight() * heightRatio;
-        float hitboxX = x + (getScaledWidth() * offsetX);
-        float hitboxY = y + (getScaledHeight() * offsetY);
+    private void updateAnimation(float delta) {
+        stateTime += delta;
+    }
 
-        hitbox.set(hitboxX, hitboxY, hitboxWidth, hitboxHeight);
+    private void updatePhysics(float delta) {
+        velocityY += gravity * delta;
+        y += velocityY * delta;
+    }
+
+    private void updateRotation() {
+        long currentTime = System.currentTimeMillis();
+
+        if (currentTime - lastFallTime > FALL_DELAY_MS) {
+            if (velocityY < 0 && fallCount < MAX_FALL_ROTATION) {
+                fallCount++;
+            }
+            lastFallTime = currentTime;
+        }
+    }
+
+    private void applyBoundaries(float topLimit, float botLimit) {
+        float scaledTopLimit = topLimit + (BASE_HEIGHT * scale);
+        float scaledBotLimit = botLimit * scale + 50;
+
+        if (y <= scaledBotLimit) {
+            y = scaledBotLimit;
+            velocityY = 0;
+        }
+
+        if (y > scaledTopLimit) {
+            y = scaledTopLimit;
+            velocityY = 0;
+        }
+    }
+
+    private void updateHitbox() {
+        float offsetX = x-getScaledWidth()/2 + 12;
+        float offsetY = y-getScaledHeight()/2 + 5;
+        hitbox.set(offsetX, offsetY, getScaledWidth(), getScaledHeight());
     }
 
     public void jump(float jumpHeight) {
         velocityY = jumpHeight;
         stateTime = 0f;
-        countFall = -2;
-        delay = System.currentTimeMillis();
+        fallCount = -2; // Reset rotation để bird hướng lên
+        lastFallTime = System.currentTimeMillis();
     }
 
     public void render(SpriteBatch batch) {
         TextureRegion currentFrame = animation.getKeyFrame(stateTime, true);
-        batch.draw(currentFrame, x, y, getWidth() / 2, getHeight() / 2,
-            getWidth(), getHeight(), scale, scale, countFall * -15f);
+        float rotation = fallCount * ROTATION_PER_FALL;
+
+        batch.draw(
+            currentFrame,
+            x, y,
+            BASE_WIDTH / 2, BASE_HEIGHT / 2,
+            BASE_WIDTH, BASE_HEIGHT,
+            scale, scale,
+            rotation
+        );
     }
 
-    public void dispose() {
-        texture.dispose();
-    }
-
-    // Getters và Setters
+    // Getters and Setters
     public float getX() {
         return x;
     }
@@ -129,61 +154,70 @@ public class Bird {
         return y;
     }
 
-    public void setX(float x) {
-        this.x = x;
-    }
-
-    public void setY(float y) {
-        this.y = y;
-    }
-
-    public void setGravity(float gravity) {
-        this.gravity = gravity;
-    }
-
-    public void setVelocityY(float velocityY) {
-        this.velocityY = velocityY;
-    }
-
-    public void setScale(float scale) {
-        this.scale = scale;
-    }
-
     public float getVelocityY() {
         return velocityY;
+    }
+
+    public float getScale() {
+        return scale;
     }
 
     public Rectangle getHitbox() {
         return hitbox;
     }
 
+    public void setX(float x) {
+        this.x = x;
+        updateHitbox();
+    }
+
+    public void setY(float y) {
+        this.y = y;
+        updateHitbox();
+    }
+
+    public void setVelocityY(float velocityY) {
+        this.velocityY = velocityY;
+    }
+
+    public void setGravity(float gravity) {
+        this.gravity = gravity;
+    }
+
+    public void setScale(float scale) {
+        this.scale = scale;
+        updateHitbox();
+    }
+
     public float getWidth() {
-        return 34;
+        return BASE_WIDTH;
     }
 
     public float getHeight() {
-        return 24;
+        return BASE_HEIGHT;
     }
 
     public float getScaledWidth() {
-        return getWidth() * scale;
+        return BASE_WIDTH * scale;
     }
 
     public float getScaledHeight() {
-        return getHeight() * scale;
+        return BASE_HEIGHT * scale;
     }
 
-    /**
-     * Kiểm tra va chạm với rectangle khác
-     */
+    // Collision detection
     public boolean isColliding(Rectangle other) {
         return hitbox.overlaps(other);
     }
 
-    /**
-     * Kiểm tra va chạm với bird khác
-     */
     public boolean isColliding(Bird other) {
         return hitbox.overlaps(other.getHitbox());
+    }
+
+    @Override
+    public void dispose() {
+        downFlapTexture.dispose();
+        midFlapTexture.dispose();
+        upFlapTexture.dispose();
     }
 }
