@@ -44,6 +44,8 @@ public class Bird implements Disposable {
         initializeAnimation();
         initializePhysics();
         initializeHitbox();
+
+
     }
 
     private void initializeTextures() {
@@ -205,7 +207,7 @@ public class Bird implements Disposable {
         return BASE_HEIGHT * scale;
     }
 
-    // Collision detection
+    // Collision
     public boolean isColliding(Rectangle other) {
         return hitbox.overlaps(other);
     }

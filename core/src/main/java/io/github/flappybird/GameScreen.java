@@ -29,7 +29,7 @@ public class GameScreen implements Screen {
     private static final float DEBUG_FONT_SCALE = 3f;
 
     //World size
-    private static int WORLD_WIDTH = 1280;
+    private static int WORLD_WIDTH = 1080;
     private static int WORLD_HEIGHT = 720;
 
     // Graphics
@@ -57,12 +57,17 @@ public class GameScreen implements Screen {
     // Debug
     private boolean showHitbox = true;
 
+    private PipeSpawner pipeSpawner;
+    private Pipe pipe;
+
     @Override
     public void show() {
         initializeGraphics();
         initializeBird();
         initializeUI();
         setupInput();
+        pipeSpawner = new PipeSpawner();
+        pipe = new Pipe(300, 0);
     }
 
     private void initializeGraphics() {
@@ -124,6 +129,8 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         update(delta);
         draw(delta);
+
+        pipeSpawner.render(batch);
     }
 
     private void update(float delta) {
@@ -165,7 +172,7 @@ public class GameScreen implements Screen {
             drawHitbox();
         }
 
-        drawUI(delta);
+        //drawUI(delta);
     }
 
     private void drawBackground() {
@@ -196,22 +203,26 @@ public class GameScreen implements Screen {
             birdHitbox.height
         );
 
+        Rectangle pipeHitbox = pipe.getHitbox();
+        shapeRenderer.rect(
+            pipeHitbox.x,
+            pipeHitbox.y,
+            pipeHitbox.width,
+            pipeHitbox.height
+        );
+
         shapeRenderer.end();
     }
 
     private void drawUI(float delta) {
-        // Update velocity label
+        // Update velocity log label
         velocityLabel.setText("VelocityY: " + (int) bird.getVelocityY());
         velocityLabel.setPosition(
             bird.getX() + bird.getScaledWidth() + 10,
             bird.getY() + 50
         );
-
-        // Clear previous actors and add current ones
         stage.clear();
         stage.addActor(velocityLabel);
-
-        // Update and draw stage
         stage.act(delta);
         stage.draw();
     }
@@ -228,6 +239,8 @@ public class GameScreen implements Screen {
         // Update world dimensions
         WORLD_WIDTH = width;
         WORLD_HEIGHT = height;
+
+
     }
 
     @Override
@@ -247,7 +260,6 @@ public class GameScreen implements Screen {
 
     @Override
     public void dispose() {
-        // Dispose of all resources
         if (batch != null) {
             batch.dispose();
         }
