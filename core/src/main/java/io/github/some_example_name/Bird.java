@@ -51,9 +51,9 @@ public class Bird {
 
             delay = System.currentTimeMillis();
         }
-        
-        if (y < 0) {
-            y = 0;
+
+        if (y < 112*6) {
+            y = 112*6;
             velocityY = 0;
         }
 

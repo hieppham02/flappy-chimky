@@ -30,6 +30,7 @@ public class GameScreen implements Screen {
 
     //Timing
     private int backgroundOffset;
+    private int baseOffset;
 
     //World parameters
     private int WORLD_WIDTH;
@@ -39,8 +40,6 @@ public class GameScreen implements Screen {
     private int scrollSpeed;
     private float scale;
     private Stage stage;
-    private BitmapFont font;
-    private Label.LabelStyle style;
     private Label logLabel;
 
     //Objects
@@ -59,9 +58,9 @@ public class GameScreen implements Screen {
         scrollSpeed = 300;
 
         stage = new Stage(new ScreenViewport());
-        font = new BitmapFont();
+        BitmapFont font = new BitmapFont();
         font.getData().setScale(5f);
-        style = new Label.LabelStyle(font, Color.WHITE);
+        Label.LabelStyle style = new Label.LabelStyle(font, Color.WHITE);
         logLabel = new Label("Debug log...", style);
 
     }
@@ -98,8 +97,8 @@ public class GameScreen implements Screen {
 
     public void SetBirdPosition() {
         bird = new Bird();
-        bird.setX(WORLD_WIDTH / 2 - (17 * scale));
-        bird.setY(WORLD_HEIGHT / 2);
+        bird.setX((float) WORLD_WIDTH / 2 - (17 * scale));
+        bird.setY((float) WORLD_HEIGHT / 2);
         bird.setGravity(-5000);
 
     }
@@ -117,9 +116,14 @@ public class GameScreen implements Screen {
     }
 
     public void scrollBackround(float delta) {
-        backgroundOffset += scrollSpeed * delta; // tốc độ (pixel/giây)
+        backgroundOffset += (int) (scrollSpeed * delta); // tốc độ (pixel/giây)
         if (backgroundOffset > WORLD_WIDTH) {
             backgroundOffset = 0;
+        }
+
+        baseOffset += (int) (scrollSpeed * delta); // tốc độ (pixel/giây)
+        if (baseOffset > WORLD_WIDTH) {
+            baseOffset = 0;
         }
     }
 
@@ -127,6 +131,11 @@ public class GameScreen implements Screen {
         // Vẽ 2 cái background liền nhau theo trục X
         batch.draw(background, -backgroundOffset, 0, WORLD_WIDTH, WORLD_HEIGHT);
         batch.draw(background, -backgroundOffset + WORLD_WIDTH, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+        Texture base = new Texture("objects/base.png");
+
+        batch.draw(base, -baseOffset, 0, 336 * 5, 112 * 5);
+        batch.draw(base, -baseOffset + WORLD_WIDTH, 0, 336 * 5, 112 * 5);
     }
 
     public void drawHitbox() {
